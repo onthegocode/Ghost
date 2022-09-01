@@ -1,3 +1,4 @@
+const logging = require('@tryghost/logging');
 const models = require('../../models');
 const tpl = require('@tryghost/tpl');
 const errors = require('@tryghost/errors');
@@ -161,7 +162,9 @@ module.exports = {
             unsafeAttrs: unsafeAttrs
         },
         async query(frame) {
+            logging.info(`api.posts.edit before`);
             let model = await postsService.editPost(frame);
+            logging.info(`api.posts.edit after`);
 
             this.headers.cacheInvalidate = postsService.handleCacheInvalidation(model);
 

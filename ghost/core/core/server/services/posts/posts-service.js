@@ -1,6 +1,7 @@
 const nql = require('@tryghost/nql');
 const {BadRequestError} = require('@tryghost/errors');
 const tpl = require('@tryghost/tpl');
+const logging = require('@tryghost/logging');
 
 const messages = {
     invalidVisibilityFilter: 'Invalid visibility filter.',
@@ -42,7 +43,9 @@ class PostsService {
                 let postEmail = model.relations.email;
 
                 if (!postEmail) {
+                    logging.info(`posts-service.editPost.addEmail before`);
                     const email = await this.mega.addEmail(model, frame.options);
+                    logging.info(`posts-service.editPost.addEmail after`);
                     model.set('email', email);
                 } else if (postEmail && postEmail.get('status') === 'failed') {
                     const email = await this.mega.retryFailedEmail(postEmail);

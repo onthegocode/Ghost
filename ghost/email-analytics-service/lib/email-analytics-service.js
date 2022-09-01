@@ -1,5 +1,6 @@
 const EventProcessingResult = require('./event-processing-result');
 const debug = require('@tryghost/debug')('services:email-analytics');
+const logging = require('@tryghost/logging');
 
 module.exports = class EmailAnalyticsService {
     constructor({config, settings, queries, eventProcessor, providers} = {}) {
@@ -42,7 +43,7 @@ module.exports = class EmailAnalyticsService {
         const lastTimestamp = await this.queries.getLastSeenEventTimestamp();
 
         const startFetch = new Date();
-        debug('fetchLatest: starting');
+        logging.info('email-analytics-service.fetchLatest: starting');
         providersLoop:
         for (const [, provider] of Object.entries(this.providers)) {
             const providerResults = await provider.fetchLatest(lastTimestamp, this.processEventBatch.bind(this), {maxEvents});
@@ -52,7 +53,7 @@ module.exports = class EmailAnalyticsService {
                 break providersLoop;
             }
         }
-        debug(`fetchLatest: finished in ${Date.now() - startFetch}ms. Fetched ${result.totalEvents} events`);
+        logging.info(`email-analytics-service.fetchLatest: finished in ${Date.now() - startFetch}ms. Fetched ${result.totalEvents} events`);
 
         return result;
     }

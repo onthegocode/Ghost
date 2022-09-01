@@ -1,6 +1,6 @@
 const _ = require('lodash');
-const debug = require('@tryghost/debug')('services:email-analytics');
 const db = require('../../../data/db');
+const logging = require('@tryghost/logging');
 
 const MIN_EMAIL_COUNT_FOR_OPEN_RATE = 5;
 
@@ -20,7 +20,7 @@ module.exports = {
         const {maxFailedAt} = await db.knex('email_recipients').select(db.knex.raw('MAX(failed_at) as maxFailedAt')).first() || {};
 
         const lastSeenEventTimestamp = _.max([maxDeliveredAt, maxOpenedAt, maxFailedAt]);
-        debug(`getLastSeenEventTimestamp: finished in ${Date.now() - startDate}ms`);
+        logging.info(`ghost.email-analytics.getLastSeenEventTimestamp: finished in ${Date.now() - startDate}ms`);
 
         return lastSeenEventTimestamp;
     },

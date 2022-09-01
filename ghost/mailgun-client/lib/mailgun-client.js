@@ -75,9 +75,7 @@ module.exports = class MailgunClient {
             }
             messageData['o:tag'] = tags;
 
-            if (bulkEmailConfig?.mailgun?.testmode) {
-                messageData['o:testmode'] = true;
-            }
+            messageData['o:testmode'] = true;
 
             // enable tracking if turned on for this email
             if (message.track_opens) {
@@ -85,7 +83,9 @@ module.exports = class MailgunClient {
             }
 
             const mailgunConfig = this.#getConfig();
+            const now = Date.now();
             const response = await mailgunInstance.messages.create(mailgunConfig.domain, messageData);
+            logging.info(`mailgun-client.send: API response in ${now - Date.now()}ms`);
 
             return {
                 id: response.id
@@ -104,11 +104,11 @@ module.exports = class MailgunClient {
             return result;
         }
 
-        debug(`fetchEvents: starting fetching first events page`);
+        logging.info(`mailgun-client.fetchEvents: starting fetching first events page`);
         const mailgunConfig = this.#getConfig();
         let page = await mailgunInstance.events.get(mailgunConfig.domain, mailgunOptions);
         let events = page?.items?.map(this.normalizeEvent) || [];
-        debug(`fetchEvents: finished fetching first page with ${events.length} events`);
+        logging.info(`mailgun-client.fetchEvents: finished fetching first page with ${events.length} events`);
 
         let eventCount = 0;
 
@@ -124,13 +124,13 @@ module.exports = class MailgunClient {
             }
 
             const nextPageId = page.pages.next.page;
-            debug(`fetchEvents: starting fetching next page ${nextPageId}`);
+            logging.info(`mailgun-client.fetchEvents: starting fetching next page ${nextPageId}`);
             page = await mailgunInstance.events.get(mailgunConfig.domain, {
                 page: nextPageId,
                 ...mailgunOptions
             });
             events = page?.items?.map(this.normalizeEvent) || [];
-            debug(`fetchEvents: finished fetching next page with ${events.length} events`);
+            logging.info(`mailgun-client.fetchEvents: finished fetching next page with ${events.length} events`);
         }
 
         return result;

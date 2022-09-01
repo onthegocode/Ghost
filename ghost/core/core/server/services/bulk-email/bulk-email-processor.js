@@ -100,6 +100,8 @@ module.exports = {
             .getFilteredCollectionQuery({filter: `email_id:${emailId}+status:[pending,failed]`}, knexOptions)
             .select('id', 'member_segment');
 
+        logging.info(`bulk-email-processor.processEmailBatch before`);
+
         const batchResults = await Promise.map(batchIds, async ({id: emailBatchId, member_segment: memberSegment}) => {
             try {
                 await this.processEmailBatch({emailBatchId, options, memberSegment});
@@ -108,6 +110,8 @@ module.exports = {
                 return new FailedBatch(emailBatchId, error);
             }
         }, {concurrency: 10});
+
+        logging.info(`bulk-email-processor.processEmailBatch after`);
 
         const successes = batchResults.filter(response => (response instanceof SuccessfulBatch));
         const failures = batchResults.filter(response => (response instanceof FailedBatch));

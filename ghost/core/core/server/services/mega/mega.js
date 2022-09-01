@@ -207,9 +207,9 @@ const addEmail = async (postModel, options) => {
     filterOptions.filter = transformEmailRecipientFilter(newsletter, emailRecipientFilter, 'email_segment');
 
     const startRetrieve = Date.now();
-    debug('addEmail: retrieving members count');
+    logging.info('addEmail: retrieving members count');
     const {meta: {pagination: {total: membersCount}}} = await membersService.api.members.list({...knexOptions, ...filterOptions});
-    debug(`addEmail: retrieved members count - ${membersCount} members (${Date.now() - startRetrieve}ms)`);
+    logging.info(`addEmail: retrieved members count - ${membersCount} members (${Date.now() - startRetrieve}ms)`);
 
     // NOTE: don't create email object when there's nobody to send the email to
     if (membersCount === 0) {
@@ -228,6 +228,7 @@ const addEmail = async (postModel, options) => {
         // we have a decent snapshot of email content for later display
         const emailData = await getEmailData(postModel, options);
 
+        logging.info(`Adding Email`);
         return models.Email.add({
             post_id: postId,
             status: 'pending',
@@ -263,6 +264,8 @@ const retryFailedEmail = async (emailModel) => {
 };
 
 async function pendingEmailHandler(emailModel, options) {
+    logging.info(`Triggered pendingEmailHandler`);
+
     // CASE: do not send email if we import a database
     // TODO: refactor post.published events to never fire on importing
     if (options && options.importing) {
@@ -275,10 +278,12 @@ async function pendingEmailHandler(emailModel, options) {
 
     // make sure recurring background analytics jobs are running once we have emails
     const emailAnalyticsJobs = require('../email-analytics/jobs');
+    logging.info(`Scheduling recurring job`);
     emailAnalyticsJobs.scheduleRecurringJobs();
 
     // @TODO move this into the jobService
     if (!process.env.NODE_ENV.startsWith('test')) {
+        logging.info(`Adding inline job`);
         return jobsService.addJob({
             job: sendEmailJob,
             data: {emailModel},
@@ -318,10 +323,10 @@ async function sendEmailJob({emailModel, options}) {
             }
         }
 
-        debug('sendEmailJob: sending email');
+        logging.info('sendEmailJob: sending email');
         startEmailSend = Date.now();
         await bulkEmailService.processEmail({emailId: emailModel.get('id'), options});
-        debug(`sendEmailJob: sent email (${Date.now() - startEmailSend}ms)`);
+        logging.info(`sendEmailJob: sent email (${Date.now() - startEmailSend}ms)`);
     } catch (error) {
         if (startEmailSend) {
             debug(`sendEmailJob: send email failed (${Date.now() - startEmailSend}ms)`);
@@ -370,11 +375,11 @@ async function getEmailMemberRows({emailModel, memberSegment, options}) {
     }
 
     const startRetrieve = Date.now();
-    debug('getEmailMemberRows: retrieving members list');
+    logging.info('getEmailMemberRows: retrieving members list');
     // select('members.*') is necessary here to avoid duplicate `email` columns in the result set
     // without it we do `select *` which pulls in the Stripe customer email too which overrides the member email
     const memberRows = await models.Member.getFilteredCollectionQuery(filterOptions).select('members.*').distinct();
-    debug(`getEmailMemberRows: retrieved members list - ${memberRows.length} members (${Date.now() - startRetrieve}ms)`);
+    logging.info(`getEmailMemberRows: retrieved members list - ${memberRows.length} members (${Date.now() - startRetrieve}ms)`);
 
     return memberRows;
 }
@@ -507,11 +512,11 @@ async function createEmailBatches({emailModel, memberRows, memberSegment, option
         return batchModel.id;
     };
 
-    debug('createEmailBatches: storing recipient list');
+    logging.info('createEmailBatches: storing recipient list');
     const startOfRecipientStorage = Date.now();
     const batches = _.chunk(memberRows, bulkEmailService.BATCH_SIZE);
     const batchIds = await Promise.mapSeries(batches, storeRecipientBatch);
-    debug(`createEmailBatches: stored recipient list (${Date.now() - startOfRecipientStorage}ms)`);
+    logging.info(`createEmailBatches: stored recipient list (${Date.now() - startOfRecipientStorage}ms)`);
 
     return batchIds;
 }

@@ -1,5 +1,4 @@
 const {parentPort} = require('worker_threads');
-const debug = require('@tryghost/debug')('jobs:email-analytics:fetch-latest');
 
 // recurring job to fetch analytics since the most recently seen event timestamp
 
@@ -59,16 +58,16 @@ if (parentPort) {
     });
 
     const fetchStartDate = new Date();
-    debug('Starting email analytics fetch of latest events');
+    parentPort.postMessage('email-analytics.fetch-latest: Starting email analytics fetch of latest events');
     const eventStats = await emailAnalyticsService.fetchLatest();
     const fetchEndDate = new Date();
-    debug(`Finished fetching ${eventStats.totalEvents} analytics events in ${fetchEndDate - fetchStartDate}ms`);
+    parentPort.postMessage(`email-analytics.fetch-latest: Finished fetching ${eventStats.totalEvents} analytics events in ${fetchEndDate - fetchStartDate}ms`);
 
     const aggregateStartDate = new Date();
-    debug(`Starting email analytics aggregation for ${eventStats.emailIds.length} emails`);
+    parentPort.postMessage(`email-analytics.fetch-latest: Starting email analytics aggregation for ${eventStats.emailIds.length} emails`);
     await emailAnalyticsService.aggregateStats(eventStats);
     const aggregateEndDate = new Date();
-    debug(`Finished aggregating email analytics in ${aggregateEndDate - aggregateStartDate}ms`);
+    parentPort.postMessage(`email-analytics.fetch-latest: Finished aggregating email analytics in ${aggregateEndDate - aggregateStartDate}ms`);
 
     if (parentPort) {
         parentPort.postMessage(`Fetched ${eventStats.totalEvents} events and aggregated stats for ${eventStats.emailIds.length} emails in ${aggregateEndDate - fetchStartDate}ms`);
